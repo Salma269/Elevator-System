@@ -1,4 +1,5 @@
 from direction import Direction
+
 class Elevator:
     def __init__(self, id):
         self.id = id
@@ -13,9 +14,10 @@ class Elevator:
         return f'| id: {self.id}, floor: {self.current_floor}, dest: {self.destinations()}, dir: {self.direction.name}' + (', DOOR OPEN |' if self.open_doors else ' |')
 
     def move(self):
-        ''' Simulate one step of movement for the elevator '''
+        '''Simulate one step of movement for the elevator'''
         if self.is_emergency:
-            return  # Don't move if emergency mode is on
+            self.open_doors = True  # Keep doors open in emergency
+            return
         self.open_doors = False
         self.current_floor += self.direction.value
         self.check_open_doors()
@@ -65,6 +67,7 @@ class Elevator:
     def get_destination_count(self):
         ''' Count the number of destinations '''
         return len(self.destinations())
+    
 
     def add_destination(self, destination, direction):
         ''' Add a destination for the elevator '''
