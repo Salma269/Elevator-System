@@ -1,5 +1,8 @@
 import tkinter as tk
 from enum import Enum
+from elevator import Elevator
+from direction import Direction
+from elevatorsystem import ElevatorSystem
 
 class ElevatorSystemGUI:
     def __init__(self, master, elevator_count=4, min_floor=0, max_floor=9):
