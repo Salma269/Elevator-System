@@ -32,14 +32,14 @@ A sophisticated elevator management system simulation with graphical interface a
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/elevator-simulation.git
+   git clone https://github.com/Salma269/Elevator-System.git
    cd elevator-simulation
 
 2. **Install dependencies:**:
    ```bash
-  Install Graphviz (for FSM visualization)
-  Install tkinter
-  Install PIL
+    Install Graphviz (for FSM visualization)
+    Install tkinter
+    Install PIL
 
 3. **Install Graphviz (for FSM visualization):**:
 
