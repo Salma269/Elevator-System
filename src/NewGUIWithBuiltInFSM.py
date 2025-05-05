@@ -184,37 +184,45 @@ class ElevatorSystemGUI:
     def build_pickup_panel(self):
         # Pickup requests section
         pickup_header = tk.Label(self.pickup_frame, text="Pickup Requests",
-                             font=('Helvetica', 14, 'bold'), bg=self.card_color)
+                            font=('Helvetica', 14, 'bold'), bg=self.card_color)
         pickup_header.pack(pady=(0, 10))
 
-        # Scrollable frame for pickup buttons
-        pickup_canvas = tk.Canvas(self.pickup_frame, bg=self.card_color,
-                              highlightthickness=0)
-        scrollbar = ttk.Scrollbar(self.pickup_frame, orient="vertical",
-                              command=pickup_canvas.yview)
-        scrollable_frame = tk.Frame(pickup_canvas, bg=self.card_color)
+        # Create a container frame for the canvas and scrollbar
+        container = tk.Frame(self.pickup_frame, bg=self.card_color)
+        container.pack(fill=tk.BOTH, expand=True)
 
+        # Create a frame to center the buttons
+        center_frame = tk.Frame(container, bg=self.card_color)
+        center_frame.pack(expand=True, fill=tk.BOTH)
+
+        # Scrollable canvas
+        pickup_canvas = tk.Canvas(center_frame, bg=self.card_color, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(center_frame, orient="vertical", command=pickup_canvas.yview)
+        
+        # Scrollable frame inside canvas
+        scrollable_frame = tk.Frame(pickup_canvas, bg=self.card_color)
         scrollable_frame.bind(
             "<Configure>",
-            lambda e: pickup_canvas.configure(
-                scrollregion=pickup_canvas.bbox("all")
-            )
+            lambda e: pickup_canvas.configure(scrollregion=pickup_canvas.bbox("all"))
         )
 
         pickup_canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         pickup_canvas.configure(yscrollcommand=scrollbar.set)
 
-        pickup_canvas.pack(side="left", fill="both", expand=True)
+        # Pack canvas and scrollbar
+        pickup_canvas.pack(side="left", fill="both", expand=True, padx=(50, 0))  # Add left padding
         scrollbar.pack(side="right", fill="y")
 
-        # Add pickup buttons to scrollable frame
-        for floor in reversed(range(self.min_floor, self.max_floor + 1)):
-            btn = ttk.Button(scrollable_frame,
-                             text=f"Request at Floor {floor}",
-                             style='Secondary.TButton',
-                             command=lambda f=floor: self.pickup(f))
-            btn.pack(fill=tk.X, pady=4, padx=5)
+        # Add pickup buttons to scrollable frame - centered
+        button_frame = tk.Frame(scrollable_frame, bg=self.card_color)
+        button_frame.pack(pady=5)
 
+        for floor in reversed(range(self.min_floor, self.max_floor + 1)):
+            btn = ttk.Button(button_frame,
+                            text=f"Request at Floor {floor}",
+                            style='Secondary.TButton',
+                            command=lambda f=floor: self.pickup(f))
+            btn.pack(fill=tk.X, pady=4, padx=20)  # Add horizontal padding to center buttons
 
 
 
@@ -404,27 +412,90 @@ class ElevatorSystemGUI:
 
     def draw_fsm(self):
         fsm_window = tk.Toplevel(self.master)
-        fsm_window.title("Elevator System FSM")
-        fsm_window.geometry("1000x800")
+        fsm_window.title("Elevator System Finite State Machine")
+        fsm_window.geometry("1200x600")  # Adjusted size for no scrollbars
         fsm_window.configure(bg=self.bg_color)
-
+        
+        # Create a header frame
+        header_frame = tk.Frame(fsm_window, bg=self.card_color, padx=20, pady=10)
+        header_frame.pack(fill=tk.X)
+        
+        tk.Label(header_frame, 
+                text="Elevator System State Machine Diagram",
+                font=('Helvetica', 14, 'bold'),
+                bg=self.card_color).pack()
+        
+        # Create a canvas for the diagram (no scrollbars)
+        canvas = tk.Canvas(fsm_window, bg=self.bg_color, width=1150, height=500)
+        canvas.pack(pady=20)
+        
+        # Generate the FSM diagram with Graphviz
         dot = Digraph('fsm', format='png')
-        dot.attr(rankdir='TB', size='10,8')
-        dot.attr('graph', bgcolor=self.bg_color, fontname='Helvetica')
-        dot.attr('edge', fontname='Helvetica', fontsize='12', arrowsize='1.2')
-
-        # Define states with styles
-        dot.node("IDLE", style='filled', fillcolor='#add8e6', shape='ellipse')
-        dot.node("MOVING_UP", style='filled', fillcolor='#fff3cd', shape='box')
-        dot.node("MOVING_DOWN", style='filled', fillcolor='#fff3cd', shape='box')
-        dot.node("DOORS_OPEN", style='filled', fillcolor='#c3e6cb', shape='diamond')
-        dot.node("EMERGENCY_STOP", style='filled', fillcolor='#dc3545', fontcolor='white', shape='octagon')
-
+        dot.attr(rankdir='LR')  # Left to right layout
+        dot.attr(size="10,5")   # Adjusted size for the window
+        dot.attr('graph', bgcolor=self.bg_color, fontname='Helvetica', fontsize='12')
+        dot.attr('node', fontname='Helvetica', fontsize='12')
+        dot.attr('edge', fontname='Helvetica', fontsize='11', arrowsize='1.2')
+        
+        # Define states
+        # Start indicator (invisible node)
+        dot.node('start', shape='point', width='0', height='0')
+        
+        # Regular states (single circle)
+        dot.node("IDLE", 
+                label="IDLE", 
+                style='filled', 
+                fillcolor='#add8e6',
+                shape='circle',
+                width='1.0')
+        
+        dot.node("MOVING_UP", 
+                label="MOVING UP", 
+                style='filled', 
+                fillcolor='#fff3cd',
+                shape='circle',
+                width='1.0')
+        
+        dot.node("MOVING_DOWN", 
+                label="MOVING DOWN", 
+                style='filled', 
+                fillcolor='#fff3cd',
+                shape='circle',
+                width='1.0')
+        
+        dot.node("DOORS_OPEN", 
+                label="DOORS OPEN", 
+                style='filled', 
+                fillcolor='#c3e6cb',
+                shape='circle',
+                width='1.0')
+        
+        dot.node("EMERGENCY_STOP", 
+                label="EMERGENCY", 
+                style='filled', 
+                fillcolor='#dc3545', 
+                fontcolor='white',
+                shape='circle',
+                width='1.0')
+        
+        # Final state (double circle)
+        dot.node("EXIT", 
+                label="EXIT", 
+                style='filled', 
+                fillcolor='#6c757d',
+                fontcolor='white',
+                shape='doublecircle',
+                width='1.0')
+        
+        # Add start arrow
+        dot.edge('start', 'IDLE', style='bold', color='black')
+        
+        # Define transitions
         transitions = [
             ("IDLE", "MOVING_UP", "Pickup above"),
             ("IDLE", "MOVING_DOWN", "Pickup below"),
-            ("MOVING_UP", "DOORS_OPEN", "Reach destination"),
-            ("MOVING_DOWN", "DOORS_OPEN", "Reach destination"),
+            ("MOVING_UP", "DOORS_OPEN", "Reach floor"),
+            ("MOVING_DOWN", "DOORS_OPEN", "Reach floor"),
             ("DOORS_OPEN", "IDLE", "No destinations"),
             ("DOORS_OPEN", "MOVING_UP", "New pickup above"),
             ("DOORS_OPEN", "MOVING_DOWN", "New pickup below"),
@@ -432,33 +503,56 @@ class ElevatorSystemGUI:
             ("MOVING_UP", "EMERGENCY_STOP", "Emergency", True),
             ("MOVING_DOWN", "EMERGENCY_STOP", "Emergency", True),
             ("DOORS_OPEN", "EMERGENCY_STOP", "Emergency", True),
-            ("EMERGENCY_STOP", "IDLE", "Emergency cleared")
+            ("EMERGENCY_STOP", "IDLE", "Reset"),
+            # Exit transitions
+            ("IDLE", "EXIT", "Shutdown"),
+            ("MOVING_UP", "EXIT", "Shutdown"),
+            ("MOVING_DOWN", "EXIT", "Shutdown"),
+            ("DOORS_OPEN", "EXIT", "Shutdown"),
+            ("EMERGENCY_STOP", "EXIT", "Shutdown")
         ]
-
+        
         for t in transitions:
             from_state, to_state, label = t[0], t[1], t[2]
             is_critical = len(t) > 3 and t[3]
+            
             if is_critical:
-                dot.edge(from_state, to_state, label=label, style='bold', color='#dc3545', fontcolor='#dc3545')
+                dot.edge(from_state, to_state, 
+                        label=label, 
+                        style='bold', 
+                        color='#dc3545',
+                        fontcolor='#dc3545',
+                        penwidth='2.0')
             else:
-                dot.edge(from_state, to_state, label=label)
-
-        output_path = 'fsm_diagram'
+                dot.edge(from_state, to_state, 
+                        label=label,
+                        color='#4e73df' if to_state != "EXIT" else '#6c757d',
+                        fontcolor='#343a40',
+                        style='dashed' if to_state == "EXIT" else 'solid')
+        
+        # Render the diagram
+        output_path = 'exit_fsm_diagram'
         dot.render(output_path, view=False)
-
+        
+        # Load and display the image
         image = Image.open(f"{output_path}.png")
-        image = image.resize((900, 700), Image.Resampling.LANCZOS)
+        image = image.resize((1100, 450), Image.Resampling.LANCZOS)  # Resize to fit canvas
         photo = ImageTk.PhotoImage(image)
-
-        canvas = tk.Canvas(fsm_window, width=1000, height=800, bg=self.bg_color)
-        canvas.pack(fill=tk.BOTH, expand=True)
-        canvas.create_image(500, 400, image=photo, anchor='center')
+        
+        canvas.create_image(575, 250, image=photo)  # Centered on canvas
         canvas.image = photo
-
+        
+        # Clean up temporary files
         os.remove(f"{output_path}.png")
         if os.path.exists(f"{output_path}"):
             os.remove(f"{output_path}")
-
+        
+        # Center the window
+        fsm_window.update_idletasks()
+        x = (fsm_window.winfo_screenwidth() // 2) - (fsm_window.winfo_width() // 2)
+        y = (fsm_window.winfo_screenheight() // 2) - (fsm_window.winfo_height() // 2)
+        fsm_window.geometry(f"+{x}+{y}")
+            
     def update_visuals(self):
         for row in self.elevator_labels:
             for lbl in row:
