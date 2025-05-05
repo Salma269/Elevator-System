@@ -37,8 +37,9 @@ A sophisticated elevator management system simulation with graphical interface a
 
 2. **Install dependencies:**:
    ```bash
-  pip install -r requirements.txt
-  Install Graphviz (for FSM visualization):
+  Install Graphviz (for FSM visualization)
+  Install tkinter
+  Install PIL
 
 3. **Install Graphviz (for FSM visualization):**:
 
@@ -48,14 +49,24 @@ A sophisticated elevator management system simulation with graphical interface a
 
 - **Linux:** sudo apt-get install graphviz
 
-
-
 4. **Usage:**
   Run the simulation:
-
    ```bash
    python elevator_system.py
 
 5. **Configuration:**
  - Set number of elevators (1-8)
  - Define floor range (max 10 floors total)
+
+6. **System Architecture:**
+  Path Selection Algorithm
+  Implements a SCAN (elevator) algorithm with these behaviors:
+    - Continues in current direction while destinations remain
+    - Changes direction only when current direction is exhausted
+    - Becomes idle when no destinations remain
+    - Prioritizes destinations based on travel direction
+
+7. **Elevator Dispatching:**
+  -**Least-Busy Selection:** Chooses elevator with fewest pending destinations
+  - **Direction Awareness:** Considers current movement direction
+  - **Emergency Priority:** Immediately handles emergency stops
