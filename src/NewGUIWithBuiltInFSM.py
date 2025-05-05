@@ -290,6 +290,7 @@ class ElevatorSystemGUI:
                            anchor='w', bg=self.card_color, fg=self.text_color)
             lbl.pack(fill=tk.X, pady=2)
             self.status_labels.append(lbl)
+            
 
     def pickup(self, floor):
         available_elevators = [e for e in self.system.elevators if not e.is_emergency]
@@ -590,14 +591,17 @@ def ask_elevator_config():
 
             if count <= 0:
                 raise ValueError("Number of elevators must be positive")
+            if count > 8:
+                raise ValueError("Maximum 8 elevators allowed")
             if min_floor >= max_floor:
                 raise ValueError("Minimum floor must be less than maximum floor")
+            if (max_floor - min_floor + 1) > 10:
+                raise ValueError("Maximum 10 floors allowed")
 
             popup.destroy()
             start_main_app(count, min_floor, max_floor)
         except ValueError as e:
             error_lbl.config(text=str(e))
-
     popup = tk.Tk()
     popup.title("Elevator System Configuration")
 
@@ -671,13 +675,15 @@ def ask_elevator_config():
         return entry
 
     # Create input fields
-    entry_count = create_input_field(inputs_frame, "Number of elevators:", "3")
+    # Create input fields
+    entry_count = create_input_field(inputs_frame, "Number of elevators (max 8):", "3")
     entry_min = create_input_field(inputs_frame, "Minimum floor:", "0")
-    entry_max = create_input_field(inputs_frame, "Maximum floor:", "9")
-
+    entry_max = create_input_field(inputs_frame, "Maximum floor (max 9 for 10 floors):", "9")
     # Error label
-    error_lbl = tk.Label(main_frame, text="", font=("Arial", 10),
-                         fg=error_color, bg=card_color)
+    error_lbl = tk.Label(main_frame, 
+                        text="Max 8 elevators and 10 floors total",
+                        font=("Arial", 10),
+                        fg=error_color, bg=card_color)
     error_lbl.pack(pady=(0, 15))
 
     # Start button
@@ -704,7 +710,14 @@ def ask_elevator_config():
 
     popup.mainloop()
 
+
 def start_main_app(elevator_count, min_floor, max_floor):
+    # Enforce maximum limits
+    elevator_count = min(elevator_count, 8)
+    total_floors = max_floor - min_floor + 1
+    if total_floors > 10:
+        max_floor = min_floor + 9  # Ensure max 10 floors
+    
     root = tk.Tk()
     app = ElevatorSystemGUI(root, elevator_count=elevator_count, min_floor=min_floor, max_floor=max_floor)
     root.mainloop()
