@@ -11,8 +11,8 @@ A sophisticated elevator management system simulation with graphical interface a
 - [Installation](#installation)
 - [Usage](#usage)
 - [System Architecture](#system-architecture)
-  - [Path Selection Algorithm](#path-selection-algorithm)
-  - [Elevator Dispatching](#elevator-dispatching)
+  - [Path Selection Algorithm](##path-selection-algorithm)
+  - [Elevator Dispatching](##elevator-dispatching)
 
 ## Features
 
@@ -54,6 +54,7 @@ A sophisticated elevator management system simulation with graphical interface a
  - Define floor range (max 10 floors total)
 
 6. **System Architecture:**
+   
   6.1.***Path Selection Algorithm***
     Implements a SCAN (elevator) algorithm with these behaviors:
       - Continues in current direction while destinations remain
