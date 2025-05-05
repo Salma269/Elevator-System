@@ -56,6 +56,7 @@ A sophisticated elevator management system simulation with graphical interface a
 6. **System Architecture:**
    
   6.1.***Path Selection Algorithm***
+  
     Implements a SCAN (elevator) algorithm with these behaviors:
       - Continues in current direction while destinations remain
       - Changes direction only when current direction is exhausted
