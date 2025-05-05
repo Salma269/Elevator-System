@@ -277,20 +277,41 @@ class ElevatorSystemGUI:
     def build_status_bar(self):
         # Status header
         header = tk.Label(self.status_frame, text="Elevator Status",
-                          font=('Helvetica', 12, 'bold'), bg=self.card_color)
+                        font=('Helvetica', 12, 'bold'), bg=self.card_color)
         header.pack(anchor='w', padx=10, pady=(5, 10))
 
-        # Status labels container
-        status_container = tk.Frame(self.status_frame, bg=self.card_color)
-        status_container.pack(fill=tk.X, padx=10, pady=(0, 5))
+        # Canvas + Scrollbar container
+        container = tk.Frame(self.status_frame, bg=self.card_color)
+        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 5))
 
-        # Create status labels with monospace font for alignment
+        # Canvas for scrolling
+        canvas = tk.Canvas(container, bg=self.card_color, highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Scrollbar
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Link scrollbar and canvas
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Frame inside canvas
+        status_container = tk.Frame(canvas, bg=self.card_color)
+        canvas.create_window((0, 0), window=status_container, anchor='nw')
+
+        # Update scrollregion when contents change
+        def on_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        status_container.bind("<Configure>", on_configure)
+
+        # Create status labels
         for i in range(self.elevator_count):
             lbl = tk.Label(status_container, text="", font=('Consolas', 10),
-                           anchor='w', bg=self.card_color, fg=self.text_color)
+                        anchor='w', bg=self.card_color, fg=self.text_color)
             lbl.pack(fill=tk.X, pady=2)
             self.status_labels.append(lbl)
-            
+
 
     def pickup(self, floor):
         available_elevators = [e for e in self.system.elevators if not e.is_emergency]
