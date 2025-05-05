@@ -54,14 +54,14 @@ A sophisticated elevator management system simulation with graphical interface a
  - Define floor range (max 10 floors total)
 
 6. **System Architecture:**
-6.1. **Path Selection Algorithm**
+6.1. ***Path Selection Algorithm***
   Implements a SCAN (elevator) algorithm with these behaviors:
     - Continues in current direction while destinations remain
     - Changes direction only when current direction is exhausted
     - Becomes idle when no destinations remain
     - Prioritizes destinations based on travel direction
 
-6.2. **Elevator Dispatching:**
+6.2. ***Elevator Dispatching:***
   -**Least-Busy Selection:** Chooses elevator with fewest pending destinations
   - **Direction Awareness:** Considers current movement direction
   - **Emergency Priority:** Immediately handles emergency stops
