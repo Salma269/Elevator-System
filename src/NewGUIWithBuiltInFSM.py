@@ -7,14 +7,26 @@ from graphviz import Digraph
 from PIL import Image, ImageTk
 import os
 from tkinter import ttk
+import tkinter.messagebox
 
 class ElevatorSystemGUI:
     def __init__(self, master, elevator_count=4, min_floor=0, max_floor=9):
         self.master = master
         self.master.title("Elevator System Simulation")
-        # STYLE CHANGE: Set a modern background color for the main window
-        self.master.configure(bg='#f0f2f5')
-        
+
+        # Modern color scheme
+        self.bg_color = '#f8f9fa'
+        self.card_color = '#ffffff'
+        self.primary_color = '#4e73df'
+        self.secondary_color = '#6c757d'
+        self.success_color = '#28a745'
+        self.danger_color = '#dc3545'
+        self.warning_color = '#ffc107'
+        self.text_color = '#343a40'
+        self.border_color = '#dee2e6'
+
+        self.master.configure(bg=self.bg_color)
+
         self.elevator_count = elevator_count
         self.min_floor = min_floor
         self.max_floor = max_floor
@@ -26,99 +38,257 @@ class ElevatorSystemGUI:
         self.emergency_buttons = []
 
         self.setup_ui()
+        self.adjust_window_size()
+
+    def adjust_window_size(self):
+        self.master.update_idletasks()
+
+        # Calculate required height based on number of floors
+        floor_height = 30  # Approximate height per floor
+        min_height = 500   # Minimum window height
+        calculated_height = (self.max_floor - self.min_floor + 1) * floor_height + 450
+        window_height = max(min_height, calculated_height)
+
+        # Calculate required width based on number of elevators
+        elevator_width = 80  # Approximate width per elevator
+        min_width = 800      # Minimum window width
+        calculated_width = self.elevator_count * elevator_width + 500
+        window_width = max(min_width, calculated_width)
+
+        # Set window size and center it
+        self.master.geometry(f"{window_width}x{window_height}")
+        x = (self.master.winfo_screenwidth() - window_width) // 2
+        y = (self.master.winfo_screenheight() - window_height) // 2
+        self.master.geometry(f"+{x}+{y}")
 
     def setup_ui(self):
-        # STYLE CHANGE: Added border and padding to control frame with a clean white background
-        self.control_frame = tk.Frame(self.master, bg='white', bd=2, relief='groove')
-        self.control_frame.pack(side=tk.LEFT, padx=15, pady=15, fill=tk.Y)
+        # Create main container with modern styling
+        main_container = tk.Frame(self.master, bg=self.bg_color)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
-        # STYLE CHANGE: Added shadow effect to shaft frame
-        self.shaft_frame = tk.Frame(self.master, bg='#e8ecef', bd=2, relief='ridge')
-        self.shaft_frame.pack(side=tk.LEFT, padx=15, pady=15)
+        # Create a frame for the elevator shafts and status bar
+        center_frame = tk.Frame(main_container, bg=self.bg_color)
+        center_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # STYLE CHANGE: Modernized status frame with subtle border
-        self.status_frame = tk.Frame(self.master, bg='#f0f2f5', bd=1, relief='flat')
-        self.status_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
+        # Elevator shafts - centered in the middle
+        self.shaft_frame = tk.Frame(center_frame, bg=self.card_color, bd=0,
+                                    highlightbackground=self.border_color,
+                                    highlightthickness=1, padx=15, pady=15)
+        self.shaft_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Controls
-        # STYLE CHANGE: Updated font and added padding
-        tk.Label(self.control_frame, text="Controls", font=("Helvetica", 14, "bold"), bg='white').pack(pady=(0, 15))
-        # STYLE CHANGE: Modern button styling with hover effect
-        tk.Button(self.control_frame, text="Step", command=self.step, width=15, bg='#007bff', fg='white', 
-                 font=("Helvetica", 10), relief='flat', activebackground='#0056b3').pack(pady=8)
-        tk.Button(self.control_frame, text="Show FSM", command=self.draw_fsm, width=15, bg='#28a745', fg='white', 
-                 font=("Helvetica", 10), relief='flat', activebackground='#218838').pack(pady=8)
-        tk.Button(self.control_frame, text="Exit", command=self.master.quit, width=15, bg='#dc3545', fg='white', 
-                 font=("Helvetica", 10), relief='flat', activebackground='#c82333').pack(pady=8)
+        # Status bar - bottom of center frame
+        self.status_frame = tk.Frame(center_frame, bg=self.card_color, bd=0,
+                                     highlightbackground=self.border_color,
+                                     highlightthickness=1)
+        self.status_frame.pack(fill=tk.X, pady=(10, 0))
 
-        # Floor pickup buttons
-        # STYLE CHANGE: Enhanced typography and spacing
-        tk.Label(self.control_frame, text="Pickup Requests", font=("Helvetica", 14, "bold"), bg='white').pack(pady=(25, 10))
+        # Right side panel for controls and pickup requests (narrower)
+        right_panel = tk.Frame(main_container, bg=self.bg_color, width=250)  # Fixed width
+        right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
+        right_panel.pack_propagate(False)  # Prevent width changes
+
+        # Control panel - top of right panel
+        self.control_frame = tk.Frame(right_panel, bg=self.card_color, bd=0,
+                                      highlightbackground=self.border_color,
+                                      highlightthickness=1, padx=15, pady=15)
+        self.control_frame.pack(fill=tk.X)
+
+        # Pickup requests panel - takes remaining space in right panel
+        self.pickup_frame = tk.Frame(right_panel, bg=self.card_color, bd=0,
+                                     highlightbackground=self.border_color,
+                                     highlightthickness=1)
+        self.pickup_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+
+        # Configure styles
+        self.configure_styles()
+
+        # Build UI components
+        self.build_control_panel()
+        self.build_elevator_shafts()
+        self.build_status_bar()
+        self.build_pickup_panel()
+
+        self.update_visuals()
+
+    def configure_styles(self):
+        # Button styles
+        style = ttk.Style()
+        style.theme_use('clam')
+
+        # Primary button
+        style.configure('Primary.TButton',
+                        background=self.primary_color,
+                        foreground='white',
+                        font=('Helvetica', 10, 'bold'),
+                        borderwidth=0,
+                        focusthickness=0,
+                        focuscolor='none',
+                        padding=8)
+        style.map('Primary.TButton',
+                  background=[('active', '#3a56b0'), ('pressed', '#2c4293')])
+
+        # Secondary button
+        style.configure('Secondary.TButton',
+                        background=self.secondary_color,
+                        foreground='white',
+                        font=('Helvetica', 10),
+                        borderwidth=0,
+                        focusthickness=0,
+                        focuscolor='none',
+                        padding=8)  # Consistent padding
+                        #width=10)  # Fixed width
+        style.map('Secondary.TButton',
+                  background=[('active', '#5a6268'), ('pressed', '#484e53')])
+
+        # Success button
+        style.configure('Success.TButton',
+                        background=self.success_color,
+                        foreground='white',
+                        font=('Helvetica', 10, 'bold'),
+                        padding=8)
+        style.map('Success.TButton',
+                  background=[('active', '#218838'), ('pressed', '#1e7e34')])
+
+        # Danger button
+        style.configure('Danger.TButton',
+                        background=self.danger_color,
+                        foreground='white',
+                        font=('Helvetica', 10, 'bold'),
+                        borderwidth=0,
+                        focusthickness=0,
+                        focuscolor='none',
+                        padding=8,  # Consistent padding
+                        width=10)  # Fixed width
+        style.map('Danger.TButton',
+                  background=[('active', '#c82333'), ('pressed', '#bd2130')])
+
+    def build_control_panel(self):
+        # Header
+        header = tk.Label(self.control_frame, text="Controls",
+                          font=('Helvetica', 14, 'bold'), bg=self.card_color)
+        header.pack(pady=(0, 15))
+
+        # Action buttons
+        btn_frame = tk.Frame(self.control_frame, bg=self.card_color)
+        btn_frame.pack(pady=(0, 10))
+
+        ttk.Button(btn_frame, text="Step", style='Primary.TButton',
+                   command=self.step).pack(fill=tk.X, pady=5)
+
+        ttk.Button(btn_frame, text="Show FSM", style='Success.TButton',
+                   command=self.draw_fsm).pack(fill=tk.X, pady=5)
+
+        ttk.Button(btn_frame, text="Exit", style='Danger.TButton',
+                   command=self.master.quit).pack(fill=tk.X, pady=5)
+
+    def build_pickup_panel(self):
+        # Pickup requests section
+        pickup_header = tk.Label(self.pickup_frame, text="Pickup Requests",
+                             font=('Helvetica', 14, 'bold'), bg=self.card_color)
+        pickup_header.pack(pady=(0, 10))
+
+        # Scrollable frame for pickup buttons
+        pickup_canvas = tk.Canvas(self.pickup_frame, bg=self.card_color,
+                              highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.pickup_frame, orient="vertical",
+                              command=pickup_canvas.yview)
+        scrollable_frame = tk.Frame(pickup_canvas, bg=self.card_color)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: pickup_canvas.configure(
+                scrollregion=pickup_canvas.bbox("all")
+            )
+        )
+
+        pickup_canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        pickup_canvas.configure(yscrollcommand=scrollbar.set)
+
+        pickup_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Add pickup buttons to scrollable frame
         for floor in reversed(range(self.min_floor, self.max_floor + 1)):
-            # STYLE CHANGE: Gradient-like button color and rounded edges
-            btn = tk.Button(self.control_frame, text=f"Request at Floor {floor}", width=20,
-                          command=lambda f=floor: self.pickup(f), bg='#6c757d', fg='white', 
-                          font=("Helvetica", 10), relief='flat', activebackground='#5a6268')
-            btn.pack(pady=4, padx=5)
-            # STYLE CHANGE: Add hover effect
-            btn.bind("<Enter>", lambda e, b=btn: b.config(bg='#5a6268'))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg='#6c757d'))
+            btn = ttk.Button(scrollable_frame,
+                             text=f"Request at Floor {floor}",
+                             style='Secondary.TButton',
+                             command=lambda f=floor: self.pickup(f))
+            btn.pack(fill=tk.X, pady=4, padx=5)
 
-        # Elevator shafts
-        # STYLE CHANGE: Centered and modernized header
-        tk.Label(self.shaft_frame, text="Elevators", font=("Helvetica", 14, "bold"), bg='#e8ecef').grid(row=0, column=0, columnspan=self.elevator_count + 1, pady=(0, 10))
-        
-        total_rows = (self.max_floor - self.min_floor) + 2
-        
+
+
+
+    def build_elevator_shafts(self):
+        # Header
+        header = tk.Label(self.shaft_frame, text="Elevators",
+                          font=('Helvetica', 14, 'bold'), bg=self.card_color)
+        header.pack(pady=(0, 15))
+
+        # Create a frame to center the elevators
+        center_container = tk.Frame(self.shaft_frame, bg=self.card_color)
+        center_container.pack(expand=True)
+
+        # Create floor labels and elevator cells
         for i, floor in enumerate(reversed(range(self.min_floor, self.max_floor + 1))):
-            row = i + 1
-            # STYLE CHANGE: Improved floor label styling
-            tk.Label(self.shaft_frame, text=f"Floor {floor}", width=10, font=("Helvetica", 10), bg='#e8ecef').grid(row=row, column=0, pady=2)
-            
+            row_frame = tk.Frame(center_container, bg=self.card_color)
+            row_frame.pack()
+
+            # Floor label
+            floor_lbl = tk.Label(row_frame, text=f"Floor {floor}",
+                                 width=10, font=('Helvetica', 10),
+                                 bg=self.card_color, anchor='w')
+            floor_lbl.pack(side=tk.LEFT, pady=2)
+
+            # Elevator cells for this floor
             floor_row = []
             for eid in range(self.elevator_count):
-                # STYLE CHANGE: Added shadow and modern look to elevator cells
-                lbl = tk.Label(self.shaft_frame, text=' ', width=5, height=2, relief='ridge', bg='white', 
-                              font=("Helvetica", 10), bd=1)
-                lbl.grid(row=row, column=eid + 1, padx=3, pady=3)
-                floor_row.append(lbl)
+                cell = tk.Label(row_frame, text=' ', width=5, height=2,
+                                relief='groove', bg='white', font=('Helvetica', 10),
+                                bd=1, highlightbackground=self.border_color)
+                cell.pack(side=tk.LEFT, padx=3, pady=3)
+                floor_row.append(cell)
             self.elevator_labels.append(floor_row)
 
         # Emergency buttons row
-        emergency_row = (self.max_floor - self.min_floor) + 2
-        
+        emergency_frame = tk.Frame(center_container, bg=self.card_color)
+        emergency_frame.pack(pady=(15, 0))
+
+        # Add spacer for floor label column
+        tk.Label(emergency_frame, text="", width=10, bg=self.card_color).pack(side=tk.LEFT)
+
         for eid in range(self.elevator_count):
-            # STYLE CHANGE: Enhanced emergency button with icon and modern styling
-            btn = tk.Button(
-                self.shaft_frame,
+            btn = ttk.Button(
+                emergency_frame,
                 text=f"E{eid} 🚨",
-                width=5,
-                bg="#f8f9fa",
-                fg="black",
-                font=("Helvetica", 10),
-                relief='flat',
-                command=lambda eid=eid: self.toggle_emergency(eid),
-                activebackground='#e9ecef'
+                style='Secondary.TButton',  # Start with Secondary style
+                command=lambda eid=eid: self.toggle_emergency(eid)
             )
-            btn.grid(row=emergency_row, column=eid + 1, pady=(15, 0))
+            btn.pack(side=tk.LEFT, padx=3)
             self.emergency_buttons.append(btn)
 
-        # Status labels
-        for i in range(self.elevator_count):
-            # STYLE CHANGE: Monospace font with better readability
-            lbl = tk.Label(self.status_frame, text="", font=("Courier New", 11), anchor='w', bg='#f0f2f5')
-            lbl.pack(fill=tk.X, padx=10, pady=2)
-            self.status_labels.append(lbl)
+    def build_status_bar(self):
+        # Status header
+        header = tk.Label(self.status_frame, text="Elevator Status",
+                          font=('Helvetica', 12, 'bold'), bg=self.card_color)
+        header.pack(anchor='w', padx=10, pady=(5, 10))
 
-        self.update_visuals()
+        # Status labels container
+        status_container = tk.Frame(self.status_frame, bg=self.card_color)
+        status_container.pack(fill=tk.X, padx=10, pady=(0, 5))
+
+        # Create status labels with monospace font for alignment
+        for i in range(self.elevator_count):
+            lbl = tk.Label(status_container, text="", font=('Consolas', 10),
+                           anchor='w', bg=self.card_color, fg=self.text_color)
+            lbl.pack(fill=tk.X, pady=2)
+            self.status_labels.append(lbl)
 
     def pickup(self, floor):
         available_elevators = [e for e in self.system.elevators if not e.is_emergency]
         if not available_elevators:
-            # STYLE CHANGE: Updated error message to show in a messagebox
             tk.messagebox.showwarning("Warning", "All elevators are in emergency mode!")
             return
-            
+
         best_elevator = min(available_elevators, key=lambda e: e.get_destination_count())
         direction = Direction.UP if best_elevator.current_floor < floor else Direction.DOWN
         best_elevator.add_destination(floor, direction)
@@ -138,66 +308,93 @@ class ElevatorSystemGUI:
     def toggle_emergency(self, elevator_id):
         elevator = self.system.elevators[elevator_id]
         elevator.is_emergency = not elevator.is_emergency
-        
+
         btn = self.emergency_buttons[elevator_id]
         if elevator.is_emergency:
-            # STYLE CHANGE: More vivid emergency color
-            btn.config(bg="#dc3545", fg="white")
+            btn.config(style='Danger.TButton')
             elevator.up_destinations.clear()
             elevator.down_destinations.clear()
             elevator.direction = Direction.STAY
             elevator.open_doors = True
         else:
-            # STYLE CHANGE: Reset to neutral color
-            btn.config(bg="#f8f9fa", fg="black")
-        
+            btn.config(style='Secondary.TButton')
+
         self.update_visuals()
 
     def ask_if_destination(self, elevator_id, current_floor):
         popup = tk.Toplevel(self.master)
         popup.title(f"Elevator {elevator_id} at Floor {current_floor}")
-        # STYLE CHANGE: Styled popup window
-        popup.configure(bg='#f8f9fa')
-        
-        # STYLE CHANGE: Enhanced popup label styling
-        tk.Label(popup, text=f"Elevator {elevator_id} doors are open at Floor {current_floor}.", 
-                font=("Helvetica", 11, "bold"), bg='#f8f9fa').pack(pady=15)
-        tk.Label(popup, text="Would you like to choose a destination?", font=("Helvetica", 10), bg='#f8f9fa').pack(pady=5)
+        popup.configure(bg=self.bg_color)
+        popup.resizable(False, False)
 
-        btn_frame = tk.Frame(popup, bg='#f8f9fa')
-        btn_frame.pack(pady=10)
+        # Create card-like container
+        container = tk.Frame(popup, bg=self.card_color, padx=20, pady=20,
+                             highlightbackground=self.border_color,
+                             highlightthickness=1)
+        container.pack(padx=20, pady=20)
 
-        # STYLE CHANGE: Modern button styling for popup
-        yes_btn = tk.Button(btn_frame, text="Yes", width=10, bg='#007bff', fg='white', 
-                           font=("Helvetica", 10), relief='flat', activebackground='#0056b3',
-                           command=lambda: self.show_destination_buttons(current_floor, elevator_id, popup))
-        yes_btn.grid(row=0, column=0, padx=8)
+        # Message
+        tk.Label(container,
+                 text=f"Elevator {elevator_id} doors are open at Floor {current_floor}.",
+                 font=('Helvetica', 11, 'bold'), bg=self.card_color).pack(pady=(0, 10))
 
-        no_btn = tk.Button(btn_frame, text="No", width=10, bg='#6c757d', fg='white', 
-                          font=("Helvetica", 10), relief='flat', activebackground='#5a6268',
-                          command=popup.destroy)
-        no_btn.grid(row=0, column=1, padx=8)
+        tk.Label(container,
+                 text="Would you like to choose a destination?",
+                 font=('Helvetica', 10), bg=self.card_color).pack(pady=(0, 15))
+
+        # Button frame
+        btn_frame = tk.Frame(container, bg=self.card_color)
+        btn_frame.pack(pady=(0, 5))
+
+        ttk.Button(btn_frame, text="Yes", style='Primary.TButton',
+                   command=lambda: self.show_destination_buttons(current_floor, elevator_id, popup)
+                   ).grid(row=0, column=0, padx=5)
+
+        ttk.Button(btn_frame, text="No", style='Secondary.TButton',
+                   command=popup.destroy).grid(row=0, column=1, padx=5)
+
+        # Center the popup
+        popup.update_idletasks()
+        x = self.master.winfo_x() + (self.master.winfo_width() // 2) - (popup.winfo_width() // 2)
+        y = self.master.winfo_y() + (self.master.winfo_height() // 2) - (popup.winfo_height() // 2)
+        popup.geometry(f"+{x}+{y}")
 
     def show_destination_buttons(self, current_floor, elevator_id, parent_popup):
         parent_popup.destroy()
 
         popup = tk.Toplevel(self.master)
         popup.title(f"Choose Destination for Elevator {elevator_id}")
-        # STYLE CHANGE: Consistent popup styling
-        popup.configure(bg='#f8f9fa')
+        popup.configure(bg=self.bg_color)
+        popup.resizable(False, False)
 
-        # STYLE CHANGE: Enhanced typography
-        tk.Label(popup, text="Select destination floor:", font=("Helvetica", 11, "bold"), bg='#f8f9fa').pack(pady=10)
+        # Create card-like container
+        container = tk.Frame(popup, bg=self.card_color, padx=20, pady=20,
+                             highlightbackground=self.border_color,
+                             highlightthickness=1)
+        container.pack(padx=20, pady=20)
 
-        for floor in range(self.min_floor, self.max_floor + 1):
-            if floor == current_floor:
-                continue
-            # STYLE CHANGE: Modern floor selection buttons
-            btn = tk.Button(popup, text=f"Floor {floor}", bg='#28a745', fg='white', 
-                          font=("Helvetica", 10), relief='flat', activebackground='#218838',
-                          command=lambda f=floor, eid=elevator_id, cf=current_floor, win=popup: 
-                          self.choose_destination(f, eid, cf, win))
-            btn.pack(padx=15, pady=4)
+        # Title
+        tk.Label(container,
+                 text="Select destination floor:",
+                 font=('Helvetica', 11, 'bold'), bg=self.card_color).pack(pady=(0, 15))
+
+        # Floor buttons grid
+        grid_frame = tk.Frame(container, bg=self.card_color)
+        grid_frame.pack()
+
+        floors = [f for f in range(self.min_floor, self.max_floor + 1) if f != current_floor]
+        cols = 3  # Number of columns in the grid
+        for i, floor in enumerate(floors):
+            btn = ttk.Button(grid_frame, text=f"Floor {floor}", style='Success.TButton',
+                             command=lambda f=floor, eid=elevator_id, cf=current_floor, win=popup:
+                             self.choose_destination(f, eid, cf, win))
+            btn.grid(row=i//cols, column=i%cols, padx=5, pady=5, sticky='nsew')
+
+        # Center the popup
+        popup.update_idletasks()
+        x = self.master.winfo_x() + (self.master.winfo_width() // 2) - (popup.winfo_width() // 2)
+        y = self.master.winfo_y() + (self.master.winfo_height() // 2) - (popup.winfo_height() // 2)
+        popup.geometry(f"+{x}+{y}")
 
     def choose_destination(self, floor, elevator_id, current_floor, popup_window):
         direction = Direction.UP if floor > current_floor else Direction.DOWN
@@ -209,17 +406,14 @@ class ElevatorSystemGUI:
         fsm_window = tk.Toplevel(self.master)
         fsm_window.title("Elevator System FSM")
         fsm_window.geometry("1000x800")
-        # STYLE CHANGE: Consistent background for FSM window
-        fsm_window.configure(bg='#f8f9fa')
+        fsm_window.configure(bg=self.bg_color)
 
         dot = Digraph('fsm', format='png')
-        # STYLE CHANGE: Modernized FSM graph styling
         dot.attr(rankdir='TB', size='10,8')
-        dot.attr('graph', bgcolor='#f8f9fa', fontname='Helvetica')
+        dot.attr('graph', bgcolor=self.bg_color, fontname='Helvetica')
         dot.attr('edge', fontname='Helvetica', fontsize='12', arrowsize='1.2')
 
         # Define states with styles
-        # STYLE CHANGE: Updated colors for better contrast
         dot.node("IDLE", style='filled', fillcolor='#add8e6', shape='ellipse')
         dot.node("MOVING_UP", style='filled', fillcolor='#fff3cd', shape='box')
         dot.node("MOVING_DOWN", style='filled', fillcolor='#fff3cd', shape='box')
@@ -245,7 +439,6 @@ class ElevatorSystemGUI:
             from_state, to_state, label = t[0], t[1], t[2]
             is_critical = len(t) > 3 and t[3]
             if is_critical:
-                # STYLE CHANGE: Enhanced critical transition styling
                 dot.edge(from_state, to_state, label=label, style='bold', color='#dc3545', fontcolor='#dc3545')
             else:
                 dot.edge(from_state, to_state, label=label)
@@ -257,8 +450,7 @@ class ElevatorSystemGUI:
         image = image.resize((900, 700), Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(image)
 
-        # STYLE CHANGE: Consistent canvas background
-        canvas = tk.Canvas(fsm_window, width=1000, height=800, bg='#f8f9fa')
+        canvas = tk.Canvas(fsm_window, width=1000, height=800, bg=self.bg_color)
         canvas.pack(fill=tk.BOTH, expand=True)
         canvas.create_image(500, 400, image=photo, anchor='center')
         canvas.image = photo
@@ -270,8 +462,7 @@ class ElevatorSystemGUI:
     def update_visuals(self):
         for row in self.elevator_labels:
             for lbl in row:
-                # STYLE CHANGE: Reset to clean white with shadow
-                lbl.config(bg='white', text=' ', relief='ridge')
+                lbl.config(bg='white', text=' ', relief='groove')
 
         for elevator in self.system.elevators:
             floor = elevator.current_floor
@@ -279,16 +470,14 @@ class ElevatorSystemGUI:
             row_index = (self.max_floor - floor)
             if 0 <= row_index < len(self.elevator_labels):
                 label = self.elevator_labels[row_index][eid]
-                
+
                 if elevator.is_emergency:
-                    # STYLE CHANGE: Vivid emergency color
-                    label.config(bg='#dc3545', text='STOP', fg='white')
+                    label.config(bg=self.danger_color, text='STOP', fg='white')
                 elif elevator.open_doors:
-                    # STYLE CHANGE: Softer green for open doors
-                    label.config(bg='#28a745', text='OPEN', fg='white')
+                    label.config(bg=self.success_color, text='OPEN', fg='white')
                 else:
-                    # STYLE CHANGE: Modern blue for active elevator
-                    label.config(bg='#007bff', text=f'E{eid}', fg='white')
+                    direction_symbol = '↑' if elevator.direction == Direction.UP else '↓' if elevator.direction == Direction.DOWN else '•'
+                    label.config(bg=self.primary_color, text=f'E{eid} {direction_symbol}', fg='white')
 
         for i, elevator in enumerate(self.system.elevators):
             status = f"Elevator {i}: Floor {elevator.current_floor}"
@@ -304,58 +493,120 @@ def ask_elevator_config():
             count = int(entry_count.get())
             min_floor = int(entry_min.get())
             max_floor = int(entry_max.get())
-            
+
             if count <= 0:
                 raise ValueError("Number of elevators must be positive")
             if min_floor >= max_floor:
                 raise ValueError("Minimum floor must be less than maximum floor")
-            
+
             popup.destroy()
             start_main_app(count, min_floor, max_floor)
         except ValueError as e:
             error_lbl.config(text=str(e))
 
     popup = tk.Tk()
-    popup.title("Startup Configuration")
-    # STYLE CHANGE: Set background to match the blue header from the image
-    popup.configure(bg='#007bff')
+    popup.title("Elevator System Configuration")
 
-    # STYLE CHANGE: Create a frame with white background and padding to mimic the card layout
-    main_frame = tk.Frame(popup, bg='white', padx=20, pady=20)
-    main_frame.place(relx=0.5, rely=0.5, anchor='center')
+    # Modern styling variables
+    bg_color = "#f8f9fa"  # Light gray background
+    card_color = "#ffffff"  # White card
+    primary_color = "#4e73df"  # Nice blue
+    text_color = "#5a5c69"  # Dark gray text
+    error_color = "#e74a3b"  # Red for errors
+    border_color = "#dddfeb"  # Light border
+    button_hover = "#2e59d9"  # Darker blue for button hover
 
-    # STYLE CHANGE: Use ttk for styled entry fields with modern look
+    # Set window background
+    popup.configure(bg=bg_color)
+
+    # Create a card-like container frame with shadow effect
+    main_frame = tk.Frame(popup, bg=card_color, padx=30, pady=30,
+                          highlightbackground=border_color, highlightthickness=1)
+    main_frame.pack(padx=0, pady=0)  # Changed from place() to pack() for proper sizing
+
+    # Header with icon (using text as icon placeholder)
+    header_frame = tk.Frame(main_frame, bg=card_color)
+    header_frame.pack(pady=(0, 20))
+
+    tk.Label(header_frame, text="⏏️", font=("Arial", 24), bg=card_color, fg=primary_color).pack(side=tk.LEFT)
+    tk.Label(header_frame, text=" Elevator Configuration", font=("Arial", 16, "bold"),
+             bg=card_color, fg=text_color).pack(side=tk.LEFT, padx=10)
+
+    # Configure ttk styles
     style = ttk.Style()
-    style.configure("Custom.TEntry", fieldbackground="white", background="white", borderwidth=1)
-    style.map("Custom.TEntry", background=[('disabled', 'gray'), ('active', 'white')])
 
-    # Elevator count
-    # STYLE CHANGE: Styled label and entry to match the image's typography and layout
-    tk.Label(main_frame, text="Number of elevators:", font=("Arial", 12), bg='white').pack(pady=(0, 5))
-    entry_count = ttk.Entry(main_frame, style="Custom.TEntry", font=("Arial", 11))
-    entry_count.pack(pady=(0, 10))
-    entry_count.insert(0, "3")
+    # Entry style
+    style.configure("Custom.TEntry",
+                    fieldbackground=card_color,
+                    foreground=text_color,
+                    bordercolor=border_color,
+                    lightcolor=border_color,
+                    darkcolor=border_color,
+                    padding=5,
+                    relief="flat",
+                    font=("Arial", 11))
 
-    # Min floor
-    tk.Label(main_frame, text="Minimum floor:", font=("Arial", 12), bg='white').pack(pady=(0, 5))
-    entry_min = ttk.Entry(main_frame, style="Custom.TEntry", font=("Arial", 11))
-    entry_min.pack(pady=(0, 10))
-    entry_min.insert(0, "0")
+    # Button style
+    style.configure("Primary.TButton",
+                    background=primary_color,
+                    foreground="blue",
+                    font=("Arial", 11, "bold"),
+                    padding=8,
+                    borderwidth=0,
+                    focusthickness=0,
+                    focuscolor=primary_color)
+    style.map("Primary.TButton",
+              background=[('active', button_hover), ('pressed', button_hover)],
+              foreground=[('active', 'blue'), ('pressed', 'blue')])
 
-    # Max floor
-    tk.Label(main_frame, text="Maximum floor:", font=("Arial", 12), bg='white').pack(pady=(0, 5))
-    entry_max = ttk.Entry(main_frame, style="Custom.TEntry", font=("Arial", 11))
-    entry_max.pack(pady=(0, 10))
-    entry_max.insert(0, "9")
+    # Input fields container
+    inputs_frame = tk.Frame(main_frame, bg=card_color)
+    inputs_frame.pack(pady=(0, 20))
 
-    # STYLE CHANGE: Error label with red text and centered alignment
-    error_lbl = tk.Label(main_frame, text="", font=("Arial", 10), fg="#dc3545", bg='white')
-    error_lbl.pack(pady=(0, 10))
+    def create_input_field(parent, label_text, default_value):
+        frame = tk.Frame(parent, bg=card_color)
+        frame.pack(pady=(0, 15), fill=tk.X)
 
-    # STYLE CHANGE: Custom button style with rounded corners and blue color from the image
-    style.configure("Custom.TButton", background="#007bff", foreground="white", font=("Arial", 11), padding=6)
-    style.map("Custom.TButton", background=[('active', '#0056b3')], foreground=[('active', 'white')])
-    ttk.Button(main_frame, text="Start", command=confirm, style="Custom.TButton").pack(pady=(0, 20))
+        tk.Label(frame, text=label_text, font=("Arial", 11),
+                 bg=card_color, fg=text_color).pack(anchor=tk.W)
+
+        entry = ttk.Entry(frame, style="Custom.TEntry", font=("Arial", 11))
+        entry.pack(fill=tk.X, pady=(5, 0))
+        entry.insert(0, default_value)
+
+        return entry
+
+    # Create input fields
+    entry_count = create_input_field(inputs_frame, "Number of elevators:", "3")
+    entry_min = create_input_field(inputs_frame, "Minimum floor:", "0")
+    entry_max = create_input_field(inputs_frame, "Maximum floor:", "9")
+
+    # Error label
+    error_lbl = tk.Label(main_frame, text="", font=("Arial", 10),
+                         fg=error_color, bg=card_color)
+    error_lbl.pack(pady=(0, 15))
+
+    # Start button
+    ttk.Button(main_frame, text="Start Simulation", command=confirm,
+               style="Primary.TButton").pack(fill=tk.X)
+
+    # Calculate and set window size to match form content
+    popup.update_idletasks()  # Update to get correct widget sizes
+
+    # Get the required width and height of the main frame
+    width = main_frame.winfo_reqwidth()
+    height = main_frame.winfo_reqheight()
+
+    # Set the window size (add a small buffer for window borders)
+    popup.geometry(f"{width+4}x{height+4}")
+
+    # Center the window on screen
+    x = (popup.winfo_screenwidth() // 2) - (width // 2)
+    y = (popup.winfo_screenheight() // 2) - (height // 2)
+    popup.geometry(f"+{x}+{y}")
+
+    # Prevent window resizing
+    popup.resizable(False, False)
 
     popup.mainloop()
 
